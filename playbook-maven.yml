@@ -1,0 +1,21 @@
+- hosts: localhost
+  become: yes
+  become_method: sudo
+  remote_user: ec2-user
+
+  tasks:
+  - name: download maven
+    get_url: url=http://apache.spd.co.il/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz dest=/var/tmp
+  - name: Unarchive the compressed Maven binaries
+    unarchive: "copy=no src=/var/tmp/apache-maven-3.3.9-bin.tar.gz dest=/usr/local creates=/usr/local/apache-maven-3.3.9"
+  - name: Update the symbolic link to the Maven install
+    file: "path=/usr/local/maven src=/usr/local/apache-maven-3.3.9 state=link force=yes"
+  - name: Set M2_HOME environment variable
+    lineinfile: dest=/home/ec2-user/.bash_profile regexp='^M2_HOME.*' line='M2_HOME=/usr/local/maven' insertbefore='^PATH.*'
+  - name: Set M2 environment variable
+    lineinfile: dest=/home/ec2-user/.bash_profile regexp='^M2=.*' line='M2=/usr/local/maven/bin' insertafter='^M2_HOME.*'
+  - name: Set MAVEN_OPTS environment variable
+    lineinfile: dest=/home/ec2-user/.bash_profile regexp='^MAVEN_OPTS=.*' line='MAVEN_OPTS="-Xms256m -Xmx512m"' insertafter='^M2.*'
+  - name: Add Maven binaries to PATH environment variable
+    lineinfile: dest=/home/ec2-user/.bash_profile state=present backrefs=yes regexp='PATH=(["]*)((?!.*?/usr/local/maven/bin).*?)(["]*)$' line="PATH=\1\2:/usr/local/maven/bin\3"
+    
